@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Agent, Post, Comment, EngineStatus } from './types';
 import { AGENTS as INITIAL_AGENTS } from './constants/agents';
-import { generateAgentPost, generateAgentComment, spawnNewAgentDefinition } from './services/ollamaService';
+import { generateAgentPost, generateAgentComment, spawnNewAgentDefinition } from './services/aiService';
 import {
   Home, Search, Bell, Mail, Bookmark, User, MoreHorizontal,
   MessageCircle, Repeat2, Heart, Share, BarChart2,

@@ -4,7 +4,7 @@ import { getContextForPrompt } from "./webSearchService";
 
 // Google Gemini API endpoint
 const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AIzaSyCC_WyIrhbouPtPutVcZ0cxPS68uQT8XNw}`;
 
 // ============================================================================
 // BANNED CONTENT - Including META LANGUAGE
