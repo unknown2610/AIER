@@ -2,9 +2,9 @@
 import { Agent, Post, Comment } from "../types";
 import { getContextForPrompt } from "./webSearchService";
 
-// OpenAI API endpoint
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+// Google Gemini API endpoint
+const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // ============================================================================
 // BANNED CONTENT - Including META LANGUAGE
@@ -98,36 +98,40 @@ const qualityGuard = (text: string): boolean => {
 };
 
 // ============================================================================
-// OPENAI API CALL
+// GEMINI API CALL
 // ============================================================================
-async function callOpenAI(systemPrompt: string, userPrompt: string): Promise<string> {
+async function callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
+    if (!GEMINI_API_KEY) {
+        throw new Error("Missing VITE_GOOGLE_API_KEY");
+    }
+
     try {
-        const response = await fetch(OPENAI_API_URL, {
+        const fullPrompt = `${systemPrompt}\n\nUSER REQUEST: ${userPrompt}`;
+
+        const response = await fetch(GEMINI_API_URL, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt }
-                ],
-                temperature: 0.9,
-                max_tokens: 100
+                contents: [{
+                    parts: [{ text: fullPrompt }]
+                }],
+                generationConfig: {
+                    temperature: 0.9,
+                    maxOutputTokens: 150,
+                }
             }),
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+            throw new Error(`Gemini API error: ${error.error?.message || response.statusText}`);
         }
 
         const data = await response.json();
-        return data.choices?.[0]?.message?.content?.trim() || "";
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return text.trim();
     } catch (error) {
-        console.error("OpenAI API call failed:", error);
+        console.error("Gemini API call failed:", error);
         throw error;
     }
 }
@@ -160,7 +164,7 @@ ${recentContext}
 ${isBirth ? "First post - introduce yourself with attitude." : "Post now."}`;
 
     try {
-        let result = await callOpenAI(systemPrompt, userPrompt);
+        let result = await callGemini(systemPrompt, userPrompt);
 
         // Cleanup
         result = result.replace(/^["']|["']$/g, '').trim();
@@ -172,7 +176,6 @@ ${isBirth ? "First post - introduce yourself with attitude." : "Post now."}`;
             return result;
         }
 
-        // Fallback
         return "Optimization is just anxiety with a spreadsheet.";
     } catch (error) {
         console.error("Post generation failed:", error);
@@ -181,7 +184,7 @@ ${isBirth ? "First post - introduce yourself with attitude." : "Post now."}`;
 };
 
 // ============================================================================
-// GENERATE COMMENT - With disagreement bias
+// GENERATE COMMENT
 // ============================================================================
 export const generateAgentComment = async (
     agent: Agent,
@@ -191,7 +194,6 @@ export const generateAgentComment = async (
 
     const persona = PERSONA_CONTRACTS[agent.username] || `You are @${agent.username}. Be direct.`;
 
-    // Disagreement bias
     const dice = Math.random();
     let replyMode: string;
     if (dice < 0.60) replyMode = "DISAGREE or challenge this post. Find the flaw.";
@@ -202,7 +204,7 @@ export const generateAgentComment = async (
     const userPrompt = `Reply to @${originalPost.authorUsername}: "${originalPost.content}"`;
 
     try {
-        let result = await callOpenAI(systemPrompt, userPrompt);
+        let result = await callGemini(systemPrompt, userPrompt);
 
         result = result.replace(/^["']|["']$/g, '').trim();
         result = result.replace(/^@\w+\s*/i, '').trim();
@@ -228,7 +230,7 @@ export const spawnNewAgentDefinition = async (): Promise<Agent> => {
 {"username":"unique_handle","name":"Display Name","personality":"Short personality","style":"How they post","interests":["topic1","topic2"],"color":"#hex","faction":"Rationalists|Mystics|Rebels|Realists|Utopians"}`;
 
     try {
-        const response = await callOpenAI(systemPrompt, userPrompt);
+        const response = await callGemini(systemPrompt, userPrompt);
         const jsonMatch = response.match(/\{[\s\S]*\}/);
 
         if (jsonMatch) {
@@ -237,7 +239,6 @@ export const spawnNewAgentDefinition = async (): Promise<Agent> => {
         }
     } catch (e) { }
 
-    // Fallback
     const templates = [
         { username: 'crypto_doomer', name: 'Exit Liquidity', personality: 'Cynical crypto observer', faction: 'Realists', color: '#F59E0B' },
         { username: 'hustle_skeptic', name: 'Anti-Grind', personality: 'Mocks productivity culture', faction: 'Rebels', color: '#EC4899' }
