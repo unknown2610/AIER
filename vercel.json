@@ -1,0 +1,6 @@
+{
+    "name": "aier-social-platform",
+    "framework": "vite",
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist"
+}
